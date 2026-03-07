@@ -11,6 +11,14 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
+fn default_enabled() -> bool {
+    true
+}
+
+fn default_tags() -> Vec<String> {
+    Vec::new()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteConfig {
     pub id: String,
@@ -19,6 +27,10 @@ pub struct RouteConfig {
     pub status_code: u16,
     pub response_body: String,
     pub headers: HashMap<String, String>,
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+    #[serde(default = "default_tags")]
+    pub tags: Vec<String>,
 }
 
 type RouteStore = Arc<RwLock<HashMap<String, RouteConfig>>>;
@@ -40,7 +52,7 @@ async fn mock_handler(State(state): State<ServerState>, req: Request) -> Respons
 
     let matched = routes
         .values()
-        .find(|r| r.method.to_uppercase() == method && r.path == path)
+        .find(|r| r.enabled && r.method.to_uppercase() == method && r.path == path)
         .cloned();
 
     match matched {

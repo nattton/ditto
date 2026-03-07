@@ -10,6 +10,8 @@ export interface RouteConfig {
   status_code: number;
   response_body: string;
   headers: Record<string, string>;
+  enabled: boolean;
+  tags: string[];
 }
 
 interface DittoStore {
@@ -19,6 +21,7 @@ interface DittoStore {
   fetchRoutes: () => Promise<void>;
   addRoute: (route: RouteConfig) => Promise<void>;
   removeRoute: (id: string) => Promise<void>;
+  toggleRoute: (id: string) => Promise<void>;
   startServer: () => Promise<void>;
   stopServer: () => Promise<void>;
   setPort: (port: number) => void;
@@ -41,6 +44,31 @@ export const useStore = create<DittoStore>((set, get) => ({
 
   removeRoute: async (id) => {
     await invoke("remove_route", { id });
+    get().fetchRoutes();
+  },
+
+  toggleRoute: async (id) => {
+    const { routes } = get();
+    const target = routes.find((r) => r.id === id);
+    if (!target) return;
+
+    const newEnabled = !target.enabled;
+    const updates: RouteConfig[] = [];
+
+    // If enabling, disable others with the same path so only one is active per path
+    if (newEnabled) {
+      for (const r of routes) {
+        if (r.id !== id && r.path === target.path && r.enabled) {
+          updates.push({ ...r, enabled: false });
+        }
+      }
+    }
+
+    updates.push({ ...target, enabled: newEnabled });
+
+    for (const r of updates) {
+      await invoke("add_route", { route: r });
+    }
     get().fetchRoutes();
   },
 

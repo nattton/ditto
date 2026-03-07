@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, KeyboardEvent } from "react";
 import { useStore, RouteConfig, HttpMethod } from "../store";
 
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
@@ -23,6 +23,8 @@ export default function RouteModal({ route, onClose }: Props) {
   const [headerRows, setHeaderRows] = useState<HeaderRow[]>([
     { key: "Content-Type", value: "application/json" },
   ]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     if (route) {
@@ -33,8 +35,28 @@ export default function RouteModal({ route, onClose }: Props) {
       setHeaderRows(
         Object.entries(route.headers).map(([key, value]) => ({ key, value }))
       );
+      setTags(route.tags ?? []);
     }
   }, [route]);
+
+  const commitTag = () => {
+    const trimmed = tagInput.trim().replace(/,+$/, "").trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags((prev) => [...prev, trimmed]);
+    }
+    setTagInput("");
+  };
+
+  const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      commitTag();
+    } else if (e.key === "Backspace" && tagInput === "" && tags.length > 0) {
+      setTags((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const removeTag = (t: string) => setTags((prev) => prev.filter((x) => x !== t));
 
   const addHeaderRow = () =>
     setHeaderRows((prev) => [...prev, { key: "", value: "" }]);
@@ -60,6 +82,8 @@ export default function RouteModal({ route, onClose }: Props) {
       status_code: statusCode,
       response_body: responseBody,
       headers,
+      enabled: route?.enabled ?? true,
+      tags,
     };
 
     if (route) {
@@ -132,6 +156,36 @@ export default function RouteModal({ route, onClose }: Props) {
               rows={6}
               className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono resize-none focus:outline-none focus:border-cyan-500"
             />
+          </div>
+
+          {/* Tags */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-zinc-500">Tags</label>
+            <div className="flex flex-wrap gap-1.5 min-h-[2rem] px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded focus-within:border-cyan-500">
+              {tags.map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs font-medium"
+                >
+                  {t}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(t)}
+                    className="text-violet-400 hover:text-red-400 leading-none"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={commitTag}
+                placeholder={tags.length === 0 ? "Add tags… (Enter or comma)" : ""}
+                className="flex-1 min-w-[8rem] bg-transparent text-zinc-100 text-xs outline-none placeholder-zinc-600"
+              />
+            </div>
           </div>
 
           {/* Headers */}

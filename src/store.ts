@@ -23,6 +23,8 @@ interface DittoStore {
   addRoute: (route: RouteConfig) => Promise<void>;
   removeRoute: (id: string) => Promise<void>;
   toggleRoute: (id: string) => Promise<void>;
+  exportRoutes: () => Promise<string>;
+  importRoutes: (routes: RouteConfig[]) => Promise<void>;
   startServer: () => Promise<void>;
   stopServer: () => Promise<void>;
   setPort: (port: number) => void;
@@ -78,6 +80,15 @@ export const useStore = create<DittoStore>((set, get) => ({
     for (const r of updates) {
       await invoke("add_route", { route: r });
     }
+    get().fetchRoutes();
+  },
+
+  exportRoutes: async () => {
+    return await invoke<string>("export_routes");
+  },
+
+  importRoutes: async (routes) => {
+    await invoke("import_routes", { routes });
     get().fetchRoutes();
   },
 

@@ -7,6 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
@@ -40,6 +41,20 @@ type RouteStore = Arc<RwLock<HashMap<String, RouteConfig>>>;
 pub struct AppState {
     pub routes: RouteStore,
     pub shutdown_tx: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
+    pub db_path: PathBuf,
+}
+
+fn load_routes(path: &Path) -> HashMap<String, RouteConfig> {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+fn persist_routes(routes: &HashMap<String, RouteConfig>, path: &Path) {
+    if let Ok(json) = serde_json::to_string_pretty(routes) {
+        let _ = std::fs::write(path, json);
+    }
 }
 
 #[derive(Clone)]
@@ -100,6 +115,7 @@ async fn get_routes(state: tauri::State<'_, AppState>) -> Result<Vec<RouteConfig
 async fn add_route(state: tauri::State<'_, AppState>, route: RouteConfig) -> Result<(), String> {
     let mut routes = state.routes.write().await;
     routes.insert(route.id.clone(), route);
+    persist_routes(&routes, &state.db_path);
     Ok(())
 }
 
@@ -107,6 +123,7 @@ async fn add_route(state: tauri::State<'_, AppState>, route: RouteConfig) -> Res
 async fn remove_route(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let mut routes = state.routes.write().await;
     routes.remove(&id);
+    persist_routes(&routes, &state.db_path);
     Ok(())
 }
 
@@ -170,16 +187,47 @@ async fn stop_server(state: tauri::State<'_, AppState>) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+async fn export_routes(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let routes = state.routes.read().await;
+    let list: Vec<&RouteConfig> = routes.values().collect();
+    serde_json::to_string_pretty(&list).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn import_routes(
+    state: tauri::State<'_, AppState>,
+    routes: Vec<RouteConfig>,
+) -> Result<(), String> {
+    let mut store = state.routes.write().await;
+    for route in routes {
+        store.insert(route.id.clone(), route);
+    }
+    persist_routes(&store, &state.db_path);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app_state = AppState {
-        routes: Arc::new(RwLock::new(HashMap::new())),
-        shutdown_tx: Mutex::new(None),
-    };
-
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(app_state)
+        .setup(|app| {
+            use tauri::Manager;
+            let data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("failed to get app data dir");
+            std::fs::create_dir_all(&data_dir).ok();
+            let db_path = data_dir.join("routes.json");
+            let initial_routes = load_routes(&db_path);
+            let app_state = AppState {
+                routes: Arc::new(RwLock::new(initial_routes)),
+                shutdown_tx: Mutex::new(None),
+                db_path,
+            };
+            app.manage(app_state);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_routes,
             add_route,
@@ -187,6 +235,8 @@ pub fn run() {
             start_server,
             stop_server,
             get_local_ips,
+            export_routes,
+            import_routes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

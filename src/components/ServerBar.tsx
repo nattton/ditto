@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useStore } from "../store";
 
 export default function ServerBar() {
   const { serverRunning, port, setPort, startServer, stopServer } = useStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localIps, setLocalIps] = useState<string[]>([]);
+
+  useEffect(() => {
+    invoke<string[]>("get_local_ips").then(setLocalIps).catch(() => {});
+  }, []);
 
   const toggle = async () => {
     setLoading(true);
@@ -53,6 +59,16 @@ export default function ServerBar() {
             {serverRunning ? "Running" : "Stopped"}
           </span>
         </div>
+
+        {serverRunning && localIps.length > 0 && (
+          <div className="flex flex-col gap-0.5 border-l border-zinc-700 pl-4">
+            {localIps.map((ip) => (
+              <span key={ip} className="font-mono text-xs text-zinc-400">
+                http://<span className="text-cyan-400">{ip}</span>:{port}
+              </span>
+            ))}
+          </div>
+        )}
 
         <button
           onClick={toggle}

@@ -60,9 +60,7 @@ async fn mock_handler(State(state): State<ServerState>, req: Request) -> Respons
             let status = StatusCode::from_u16(route.status_code).unwrap_or(StatusCode::OK);
             let mut builder = Response::builder().status(status);
             for (k, v) in &route.headers {
-                if let (Ok(name), Ok(val)) =
-                    (HeaderName::from_str(k), HeaderValue::from_str(v))
-                {
+                if let (Ok(name), Ok(val)) = (HeaderName::from_str(k), HeaderValue::from_str(v)) {
                     builder = builder.header(name, val);
                 }
             }
@@ -116,8 +114,10 @@ async fn start_server(state: tauri::State<'_, AppState>, port: u16) -> Result<()
     let server_state = ServerState {
         routes: state.routes.clone(),
     };
-    let app = Router::new().fallback(mock_handler).with_state(server_state);
-    let addr = format!("127.0.0.1:{}", port);
+    let app = Router::new()
+        .fallback(mock_handler)
+        .with_state(server_state);
+    let addr = format!("0.0.0.0:{}", port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .map_err(|e| e.to_string())?;
@@ -131,6 +131,23 @@ async fn start_server(state: tauri::State<'_, AppState>, port: u16) -> Result<()
             .ok();
     });
     Ok(())
+}
+
+#[tauri::command]
+fn get_local_ips() -> Vec<String> {
+    use std::net::UdpSocket;
+    let mut ips = vec!["127.0.0.1".to_string()];
+    if let Ok(socket) = UdpSocket::bind("0.0.0.0:0") {
+        if socket.connect("8.8.8.8:80").is_ok() {
+            if let Ok(addr) = socket.local_addr() {
+                let ip = addr.ip().to_string();
+                if ip != "127.0.0.1" {
+                    ips.push(ip);
+                }
+            }
+        }
+    }
+    ips
 }
 
 #[tauri::command]
@@ -160,6 +177,7 @@ pub fn run() {
             remove_route,
             start_server,
             stop_server,
+            get_local_ips,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

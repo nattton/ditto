@@ -67,7 +67,7 @@ interface Props {
 }
 
 export default function RouteList({ onEdit }: Props) {
-  const { routes, removeRoute, toggleRoute, serverRunning, port } = useStore();
+  const { routes, removeRoute, toggleRoute, duplicateRoute, serverRunning, port } = useStore();
   const [search, setSearch] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
 
@@ -255,6 +255,13 @@ export default function RouteList({ onEdit }: Props) {
                         className="px-3 py-1 text-xs rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
                       >
                         Edit
+                      </button>
+                      <button
+                        onClick={() => duplicateRoute(route.id)}
+                        className="px-3 py-1 text-xs rounded bg-zinc-800 text-zinc-400 hover:bg-zinc-700 transition-colors"
+                        title="Duplicate route"
+                      >
+                        Copy
                       </button>
                       <button
                         onClick={() => removeRoute(route.id)}

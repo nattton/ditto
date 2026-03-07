@@ -23,6 +23,7 @@ interface DittoStore {
   addRoute: (route: RouteConfig) => Promise<void>;
   removeRoute: (id: string) => Promise<void>;
   toggleRoute: (id: string) => Promise<void>;
+  duplicateRoute: (id: string) => Promise<void>;
   exportRoutes: () => Promise<string>;
   importRoutes: (routes: RouteConfig[]) => Promise<void>;
   startServer: () => Promise<void>;
@@ -85,6 +86,15 @@ export const useStore = create<DittoStore>((set, get) => ({
 
   exportRoutes: async () => {
     return await invoke<string>("export_routes");
+  },
+
+  duplicateRoute: async (id) => {
+    const { routes } = get();
+    const target = routes.find((r) => r.id === id);
+    if (!target) return;
+    const copy: RouteConfig = { ...target, id: crypto.randomUUID(), enabled: false };
+    await invoke("add_route", { route: copy });
+    get().fetchRoutes();
   },
 
   importRoutes: async (routes) => {

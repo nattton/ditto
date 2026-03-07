@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "ANY";
 
 export interface RouteConfig {
   id: string;
@@ -55,10 +55,18 @@ export const useStore = create<DittoStore>((set, get) => ({
     const newEnabled = !target.enabled;
     const updates: RouteConfig[] = [];
 
-    // If enabling, disable others with the same path so only one is active per path
+    // If enabling, disable others with the same path AND conflicting method
+    // (same method, or either side is ANY) so only one wins per effective method+path
     if (newEnabled) {
       for (const r of routes) {
-        if (r.id !== id && r.path === target.path && r.enabled) {
+        if (
+          r.id !== id &&
+          r.path === target.path &&
+          r.enabled &&
+          (r.method === target.method ||
+            r.method === "ANY" ||
+            target.method === "ANY")
+        ) {
           updates.push({ ...r, enabled: false });
         }
       }

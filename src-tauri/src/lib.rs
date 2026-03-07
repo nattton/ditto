@@ -52,7 +52,11 @@ async fn mock_handler(State(state): State<ServerState>, req: Request) -> Respons
 
     let matched = routes
         .values()
-        .find(|r| r.enabled && r.method.to_uppercase() == method && r.path == path)
+        .find(|r| {
+            r.enabled
+                && (r.method.to_uppercase() == "ANY" || r.method.to_uppercase() == method)
+                && r.path == path
+        })
         .cloned();
 
     match matched {

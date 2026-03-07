@@ -7,6 +7,7 @@ const METHOD_STYLES: Record<HttpMethod, string> = {
   PUT: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   PATCH: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   DELETE: "bg-red-500/20 text-red-400 border-red-500/30",
+  ANY: "bg-violet-500/20 text-violet-300 border-violet-500/30",
 };
 
 interface Props {
@@ -22,7 +23,7 @@ export default function RouteList({ onEdit }: Props) {
 
   const toggleTag = (tag: string) =>
     setActiveTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
 
   const filtered = routes.filter((r) => {
@@ -38,7 +39,9 @@ export default function RouteList({ onEdit }: Props) {
       <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
         <div className="text-5xl mb-4">🎭</div>
         <p className="text-lg font-medium">No mock routes yet</p>
-        <p className="text-sm mt-1">Click "+ Add Route" to create your first mock</p>
+        <p className="text-sm mt-1">
+          Click "+ Add Route" to create your first mock
+        </p>
       </div>
     );
   }
@@ -48,8 +51,19 @@ export default function RouteList({ onEdit }: Props) {
       {/* Search */}
       <div className="relative">
         <span className="absolute inset-y-0 left-3 flex items-center text-zinc-500 pointer-events-none">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
+            />
           </svg>
         </span>
         <input
@@ -89,7 +103,10 @@ export default function RouteList({ onEdit }: Props) {
 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-zinc-600">
-          <p className="text-sm">No routes match <span className="font-mono text-zinc-500">"{search}"</span></p>
+          <p className="text-sm">
+            No routes match{" "}
+            <span className="font-mono text-zinc-500">"{search}"</span>
+          </p>
         </div>
       ) : (
         <div className="rounded-xl border border-zinc-800 overflow-hidden">
@@ -133,7 +150,9 @@ export default function RouteList({ onEdit }: Props) {
                       {route.method}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-zinc-100">{route.path}</td>
+                  <td className="px-4 py-3 font-mono text-zinc-100">
+                    {route.path}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {(route.tags ?? []).map((t) => (
@@ -164,7 +183,8 @@ export default function RouteList({ onEdit }: Props) {
                   <td className="px-4 py-3 text-zinc-500 font-mono text-xs">
                     {serverRunning ? (
                       <span className="text-zinc-400">
-                        http://127.0.0.1:{port}{route.path}
+                        http://127.0.0.1:{port}
+                        {route.path}
                       </span>
                     ) : (
                       <span className="text-zinc-700">server stopped</span>
@@ -195,4 +215,3 @@ export default function RouteList({ onEdit }: Props) {
     </div>
   );
 }
-

@@ -1,7 +1,7 @@
 import { useState, useEffect, KeyboardEvent } from "react";
 import { useStore, RouteConfig, HttpMethod } from "../store";
 
-const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
+const METHODS: HttpMethod[] = ["ANY", "GET", "POST", "PUT", "PATCH", "DELETE"];
 
 interface HeaderRow {
   key: string;
@@ -33,7 +33,7 @@ export default function RouteModal({ route, onClose }: Props) {
       setStatusCode(route.status_code);
       setResponseBody(route.response_body);
       setHeaderRows(
-        Object.entries(route.headers).map(([key, value]) => ({ key, value }))
+        Object.entries(route.headers).map(([key, value]) => ({ key, value })),
       );
       setTags(route.tags ?? []);
     }
@@ -56,7 +56,8 @@ export default function RouteModal({ route, onClose }: Props) {
     }
   };
 
-  const removeTag = (t: string) => setTags((prev) => prev.filter((x) => x !== t));
+  const removeTag = (t: string) =>
+    setTags((prev) => prev.filter((x) => x !== t));
 
   const addHeaderRow = () =>
     setHeaderRows((prev) => [...prev, { key: "", value: "" }]);
@@ -66,7 +67,7 @@ export default function RouteModal({ route, onClose }: Props) {
 
   const updateHeaderRow = (i: number, field: "key" | "value", val: string) =>
     setHeaderRows((prev) =>
-      prev.map((row, idx) => (idx === i ? { ...row, [field]: val } : row))
+      prev.map((row, idx) => (idx === i ? { ...row, [field]: val } : row)),
     );
 
   const save = async () => {
@@ -182,7 +183,9 @@ export default function RouteModal({ route, onClose }: Props) {
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleTagKeyDown}
                 onBlur={commitTag}
-                placeholder={tags.length === 0 ? "Add tags… (Enter or comma)" : ""}
+                placeholder={
+                  tags.length === 0 ? "Add tags… (Enter or comma)" : ""
+                }
                 className="flex-1 min-w-[8rem] bg-transparent text-zinc-100 text-xs outline-none placeholder-zinc-600"
               />
             </div>

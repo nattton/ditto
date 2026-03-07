@@ -2,6 +2,56 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useStore } from "../store";
 
+function CopyIpButton({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      title={`Copy ${url}`}
+      className="ml-1 p-0.5 rounded text-zinc-600 hover:text-cyan-400 transition-colors"
+    >
+      {copied ? (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-3 h-3 text-emerald-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      ) : (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-3 h-3"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 export default function ServerBar() {
   const { serverRunning, port, setPort, startServer, stopServer } = useStore();
   const [loading, setLoading] = useState(false);
@@ -9,7 +59,9 @@ export default function ServerBar() {
   const [localIps, setLocalIps] = useState<string[]>([]);
 
   useEffect(() => {
-    invoke<string[]>("get_local_ips").then(setLocalIps).catch(() => {});
+    invoke<string[]>("get_local_ips")
+      .then(setLocalIps)
+      .catch(() => {});
   }, []);
 
   const toggle = async () => {
@@ -31,13 +83,19 @@ export default function ServerBar() {
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-zinc-900 border-b border-zinc-800">
       <div className="flex items-center gap-3">
-        <span className="text-2xl font-bold text-cyan-400 tracking-tight">ditto</span>
-        <span className="text-xs text-zinc-500 font-mono mt-1">REST mock server</span>
+        <span className="text-2xl font-bold text-cyan-400 tracking-tight">
+          ditto
+        </span>
+        <span className="text-xs text-zinc-500 font-mono mt-1">
+          REST mock server
+        </span>
       </div>
 
       <div className="flex items-center gap-4">
         {error && (
-          <span className="text-xs text-red-400 max-w-xs truncate">{error}</span>
+          <span className="text-xs text-red-400 max-w-xs truncate">
+            {error}
+          </span>
         )}
 
         <div className="flex items-center gap-2">
@@ -55,18 +113,27 @@ export default function ServerBar() {
           <span
             className={`w-2 h-2 rounded-full ${serverRunning ? "bg-emerald-400 shadow-[0_0_6px_#34d399]" : "bg-zinc-600"}`}
           />
-          <span className={`text-xs font-medium ${serverRunning ? "text-emerald-400" : "text-zinc-500"}`}>
+          <span
+            className={`text-xs font-medium ${serverRunning ? "text-emerald-400" : "text-zinc-500"}`}
+          >
             {serverRunning ? "Running" : "Stopped"}
           </span>
         </div>
 
         {serverRunning && localIps.length > 0 && (
           <div className="flex flex-col gap-0.5 border-l border-zinc-700 pl-4">
-            {localIps.map((ip) => (
-              <span key={ip} className="font-mono text-xs text-zinc-400">
-                http://<span className="text-cyan-400">{ip}</span>:{port}
-              </span>
-            ))}
+            {localIps.map((ip) => {
+              const url = `http://${ip}:${port}`;
+              return (
+                <span
+                  key={ip}
+                  className="flex items-center font-mono text-xs text-zinc-400"
+                >
+                  http://<span className="text-cyan-400">{ip}</span>:{port}
+                  <CopyIpButton url={url} />
+                </span>
+              );
+            })}
           </div>
         )}
 

@@ -31,6 +31,8 @@ pub struct RouteConfig {
     pub enabled: bool,
     #[serde(default = "default_tags")]
     pub tags: Vec<String>,
+    #[serde(default)]
+    pub delay_ms: u64,
 }
 
 type RouteStore = Arc<RwLock<HashMap<String, RouteConfig>>>;
@@ -61,6 +63,9 @@ async fn mock_handler(State(state): State<ServerState>, req: Request) -> Respons
 
     match matched {
         Some(route) => {
+            if route.delay_ms > 0 {
+                tokio::time::sleep(std::time::Duration::from_millis(route.delay_ms)).await;
+            }
             let status = StatusCode::from_u16(route.status_code).unwrap_or(StatusCode::OK);
             let mut builder = Response::builder().status(status);
             for (k, v) in &route.headers {

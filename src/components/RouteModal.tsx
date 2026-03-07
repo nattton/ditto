@@ -25,6 +25,7 @@ export default function RouteModal({ route, onClose }: Props) {
   ]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [delayMs, setDelayMs] = useState(0);
 
   useEffect(() => {
     if (route) {
@@ -36,6 +37,7 @@ export default function RouteModal({ route, onClose }: Props) {
         Object.entries(route.headers).map(([key, value]) => ({ key, value })),
       );
       setTags(route.tags ?? []);
+      setDelayMs(route.delay_ms ?? 0);
     }
   }, [route]);
 
@@ -85,6 +87,7 @@ export default function RouteModal({ route, onClose }: Props) {
       headers,
       enabled: route?.enabled ?? true,
       tags,
+      delay_ms: delayMs,
     };
 
     if (route) {
@@ -143,6 +146,18 @@ export default function RouteModal({ route, onClose }: Props) {
                 type="number"
                 value={statusCode}
                 onChange={(e) => setStatusCode(Number(e.target.value))}
+                className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            <div className="flex flex-col gap-1 w-28">
+              <label className="text-xs text-zinc-500">Delay (ms)</label>
+              <input
+                type="number"
+                min={0}
+                value={delayMs}
+                onChange={(e) =>
+                  setDelayMs(Math.max(0, Number(e.target.value)))
+                }
                 className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono focus:outline-none focus:border-cyan-500"
               />
             </div>

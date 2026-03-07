@@ -12,6 +12,7 @@ export interface RouteConfig {
   headers: Record<string, string>;
   enabled: boolean;
   tags: string[];
+  delay_ms: number;
 }
 
 interface DittoStore {

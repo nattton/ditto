@@ -1,6 +1,58 @@
 import { useState } from "react";
 import { useStore, RouteConfig, HttpMethod } from "../store";
 
+function CopyButton({ text, disabled }: { text: string; disabled: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    if (disabled) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      disabled={disabled}
+      title={disabled ? "Server stopped" : `Copy ${text}`}
+      className="p-1.5 rounded text-zinc-500 hover:text-cyan-400 hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+    >
+      {copied ? (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-3.5 h-3.5 text-emerald-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      ) : (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-3.5 h-3.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 const METHOD_STYLES: Record<HttpMethod, string> = {
   GET: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   POST: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -117,8 +169,9 @@ export default function RouteList({ onEdit }: Props) {
                 <th className="px-4 py-3 text-left">Method</th>
                 <th className="px-4 py-3 text-left">Path</th>
                 <th className="px-4 py-3 text-left">Tags</th>
+                <th className="px-4 py-3 text-left">Delay</th>
                 <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">URL</th>
+                <th className="px-4 py-3 text-left">Copy URL</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -166,6 +219,15 @@ export default function RouteList({ onEdit }: Props) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
+                    {(route.delay_ms ?? 0) > 0 ? (
+                      <span className="font-mono text-xs text-amber-400">
+                        {route.delay_ms}ms
+                      </span>
+                    ) : (
+                      <span className="font-mono text-xs text-zinc-700">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
                     <span
                       className={`font-mono text-xs font-semibold ${
                         route.status_code >= 500
@@ -180,15 +242,11 @@ export default function RouteList({ onEdit }: Props) {
                       {route.status_code}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-zinc-500 font-mono text-xs">
-                    {serverRunning ? (
-                      <span className="text-zinc-400">
-                        http://127.0.0.1:{port}
-                        {route.path}
-                      </span>
-                    ) : (
-                      <span className="text-zinc-700">server stopped</span>
-                    )}
+                  <td className="px-4 py-3">
+                    <CopyButton
+                      text={`http://127.0.0.1:${port}${route.path}`}
+                      disabled={!serverRunning}
+                    />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">

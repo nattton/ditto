@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111116"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+    <linearGradient id="cyan-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+
+  <!-- Subtle inner ring glow -->
+  <rect x="10" y="10" width="492" height="492" rx="100"
+        fill="none" stroke="#22d3ee" stroke-width="1.5" opacity="0.12"/>
+
+  <!-- Ghost / echo D (the "ditto" duplicate) — offset down-right, very faint -->
+  <path fill-rule="evenodd" fill="#22d3ee" opacity="0.12"
+    d="M 175,142 L 175,400 L 265,400
+       Q 398,400 398,271
+       Q 398,142 265,142 Z
+       M 230,196 L 265,196
+       Q 342,196 342,271
+       Q 342,346 265,346
+       L 230,346 Z"/>
+
+  <!-- Main D — bold, filled with gradient, with glow -->
+  <path fill-rule="evenodd" fill="url(#cyan-grad)" filter="url(#glow)"
+    d="M 138,112 L 138,396 L 244,396
+       Q 390,396 390,254
+       Q 390,112 244,112 Z
+       M 198,168 L 244,168
+       Q 328,168 328,254
+       Q 328,340 244,340
+       L 198,340 Z"/>
+
+  <!-- Ditto marks (〃) — two small slanted lines bottom-right of D -->
+  <g fill="#22d3ee" opacity="0.70">
+    <rect x="318" y="350" width="11" height="46" rx="5.5"
+          transform="rotate(-18 323.5 373)"/>
+    <rect x="346" y="350" width="11" height="46" rx="5.5"
+          transform="rotate(-18 351.5 373)"/>
+  </g>
+</svg>

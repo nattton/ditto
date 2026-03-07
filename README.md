@@ -1,12 +1,21 @@
 # Ditto
 
-Ditto is a lightweight desktop app for running a local HTTP mock server. Define routes with custom methods, paths, status codes, response bodies, and headers — then start the server and instantly intercept API calls during development or testing.
+Ditto is a lightweight desktop app for running a local HTTP mock server. Define routes with custom methods, paths, status codes, response bodies, headers, tags, and delays — then start the server and instantly intercept API calls during development or testing.
 
 ## Features
 
-- **Mock HTTP routes** — configure GET, POST, PUT, PATCH, and DELETE routes with custom status codes, JSON response bodies, and response headers
+- **Mock HTTP routes** — configure ANY, GET, POST, PUT, PATCH, DELETE (or custom) routes with custom status codes, JSON bodies, and headers
+- **ANY method wildcard** — a route set to `ANY` matches all HTTP methods on that path
+- **Enable / disable routes** — toggle individual routes on or off; enabling a route automatically disables conflicting routes on the same path
+- **Response delay** — simulate latency by setting a per-route delay in milliseconds
+- **Multi-tag system** — tag routes and filter the list by one or more tags
+- **Path search** — filter routes in real time by path
+- **Duplicate route** — one-click copy of any route (duplicate starts disabled)
+- **Export / Import** — export all routes to a JSON file; import from a file and selectively choose which routes to add
+- **Persistent storage** — routes are saved to disk and restored automatically on next launch
+- **Copy URL** — click the clipboard icon on any row to copy the full mock URL
+- **Local IP display** — when the server is running, all accessible addresses (localhost + LAN IP) are shown in the toolbar with copy buttons
 - **Start/stop server** — spin up a local HTTP server on a configurable port with one click
-- **Persistent route management** — add, edit, and remove routes through a clean UI
 - **Native desktop app** — built with Tauri for a fast, lightweight experience with no Electron overhead
 
 ## Tech Stack

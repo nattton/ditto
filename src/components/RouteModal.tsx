@@ -268,12 +268,29 @@ export default function RouteModal({ route, onClose }: Props) {
                   Expand
                 </button>
               </div>
-              <textarea
-                value={responseBody}
-                onChange={(e) => setResponseBody(e.target.value)}
-                rows={6}
-                className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono resize-none focus:outline-none focus:border-cyan-500"
-              />
+              <div className="rounded overflow-hidden border border-zinc-700 focus-within:border-cyan-500">
+                <Editor
+                  height="200px"
+                  language={editorLanguage}
+                  theme="vs-dark"
+                  value={responseBody}
+                  onChange={(val) => setResponseBody(val ?? "")}
+                  options={{
+                    fontSize: 13,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    wordWrap: "on",
+                    tabSize: 2,
+                    automaticLayout: true,
+                    formatOnPaste: true,
+                    lineNumbers: "off",
+                    folding: false,
+                    glyphMargin: false,
+                    lineDecorationsWidth: 0,
+                    lineNumbersMinChars: 0,
+                  }}
+                />
+              </div>
             </div>
 
             {/* Tags */}

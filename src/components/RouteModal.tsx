@@ -1,5 +1,7 @@
-import { useState, useEffect, KeyboardEvent } from "react";
+import { useState, useEffect, KeyboardEvent, useRef } from "react";
 import { useStore, RouteConfig, HttpMethod } from "../store";
+import Editor, { OnMount } from "@monaco-editor/react";
+import type { editor as MonacoEditor } from "monaco-editor";
 
 const METHODS: HttpMethod[] = ["ANY", "GET", "POST", "PUT", "PATCH", "DELETE"];
 
@@ -27,6 +29,32 @@ export default function RouteModal({ route, onClose }: Props) {
   const [tagInput, setTagInput] = useState("");
   const [delayMs, setDelayMs] = useState(0);
   const [bodyFullscreen, setBodyFullscreen] = useState(false);
+  const monacoEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(
+    null,
+  );
+
+  const editorLanguage = (() => {
+    const ct =
+      headerRows
+        .find((r) => r.key.trim().toLowerCase() === "content-type")
+        ?.value.toLowerCase() ?? "";
+    if (ct.includes("json")) return "json";
+    if (ct.includes("xml")) return "xml";
+    if (ct.includes("html")) return "html";
+    if (ct.includes("css")) return "css";
+    if (ct.includes("javascript") || ct.includes("ecmascript"))
+      return "javascript";
+    if (ct.includes("typescript")) return "typescript";
+    return "plaintext";
+  })();
+
+  const handleEditorMount: OnMount = (editorInstance) => {
+    monacoEditorRef.current = editorInstance;
+  };
+
+  const formatDocument = () => {
+    monacoEditorRef.current?.getAction("editor.action.formatDocument")?.run();
+  };
 
   useEffect(() => {
     if (route) {
@@ -101,25 +129,50 @@ export default function RouteModal({ route, onClose }: Props) {
   return (
     <>
       {bodyFullscreen && (
-        <div className="fixed inset-0 z-[60] flex flex-col bg-zinc-950">
-          <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-800">
+        <div className="fixed inset-0 z-[60] flex flex-col bg-[#1e1e1e]">
+          <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-800 bg-zinc-900">
             <span className="text-sm font-semibold text-zinc-100">
               Response Body
             </span>
-            <button
-              type="button"
-              onClick={() => setBodyFullscreen(false)}
-              className="px-3 py-1.5 text-sm rounded bg-cyan-500 text-zinc-950 font-semibold hover:bg-cyan-400 transition-colors"
-            >
-              Done
-            </button>
+            <div className="flex items-center gap-3">
+              {editorLanguage !== "plaintext" && (
+                <button
+                  type="button"
+                  onClick={formatDocument}
+                  className="px-3 py-1.5 text-xs rounded bg-zinc-700 text-zinc-200 hover:bg-zinc-600 transition-colors font-mono"
+                >
+                  Format
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setBodyFullscreen(false)}
+                className="px-3 py-1.5 text-sm rounded bg-cyan-500 text-zinc-950 font-semibold hover:bg-cyan-400 transition-colors"
+              >
+                Done
+              </button>
+            </div>
           </div>
-          <textarea
-            autoFocus
-            value={responseBody}
-            onChange={(e) => setResponseBody(e.target.value)}
-            className="flex-1 w-full px-6 py-4 bg-zinc-950 text-zinc-100 text-sm font-mono resize-none focus:outline-none"
-          />
+          <div className="flex-1">
+            <Editor
+              height="100%"
+              language={editorLanguage}
+              theme="vs-dark"
+              value={responseBody}
+              onChange={(val) => setResponseBody(val ?? "")}
+              onMount={handleEditorMount}
+              options={{
+                fontSize: 13,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                wordWrap: "on",
+                tabSize: 2,
+                automaticLayout: true,
+                formatOnPaste: true,
+                formatOnType: true,
+              }}
+            />
+          </div>
         </div>
       )}
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">

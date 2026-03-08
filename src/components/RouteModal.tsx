@@ -16,7 +16,9 @@ interface Props {
 }
 
 export default function RouteModal({ route, onClose }: Props) {
-  const { addRoute, removeRoute } = useStore();
+  const { addRoute, removeRoute, theme } = useStore();
+
+  const monacoTheme = theme === "dark" ? "vs-dark" : "light";
 
   const [method, setMethod] = useState<HttpMethod>("GET");
   const [path, setPath] = useState("/");
@@ -129,7 +131,10 @@ export default function RouteModal({ route, onClose }: Props) {
   return (
     <>
       {bodyFullscreen && (
-        <div className="fixed inset-0 z-[60] flex flex-col bg-[#1e1e1e]">
+        <div
+          className="fixed inset-0 z-[60] flex flex-col"
+          style={{ background: theme === "dark" ? "#1e1e1e" : "#ffffff" }}
+        >
           <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-800 bg-zinc-900">
             <span className="text-sm font-semibold text-zinc-100">
               Response Body
@@ -157,7 +162,7 @@ export default function RouteModal({ route, onClose }: Props) {
             <Editor
               height="100%"
               language={editorLanguage}
-              theme="vs-dark"
+              theme={monacoTheme}
               value={responseBody}
               onChange={(val) => setResponseBody(val ?? "")}
               onMount={handleEditorMount}
@@ -272,7 +277,7 @@ export default function RouteModal({ route, onClose }: Props) {
                 <Editor
                   height="200px"
                   language={editorLanguage}
-                  theme="vs-dark"
+                  theme={monacoTheme}
                   value={responseBody}
                   onChange={(val) => setResponseBody(val ?? "")}
                   options={{

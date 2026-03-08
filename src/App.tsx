@@ -6,7 +6,7 @@ import RouteModal from "./components/RouteModal";
 import ImportModal from "./components/ImportModal";
 
 function App() {
-  const { fetchRoutes, exportRoutes } = useStore();
+  const { fetchRoutes, exportRoutes, theme } = useStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRoute, setEditingRoute] = useState<RouteConfig | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -14,6 +14,10 @@ function App() {
   useEffect(() => {
     fetchRoutes();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", theme === "light");
+  }, [theme]);
 
   const openAdd = () => {
     setEditingRoute(null);

@@ -253,29 +253,97 @@ export default function RouteModal({ route, onClose }: Props) {
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-zinc-500">Response Body</label>
-                <button
-                  type="button"
-                  onClick={() => setBodyFullscreen(true)}
-                  className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
-                  title="Open fullscreen editor"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-3.5 h-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                <div className="flex items-center gap-3">
+                  <label
+                    className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 cursor-pointer"
+                    title="Import from file"
                   >
-                    <polyline points="15 3 21 3 21 9" />
-                    <polyline points="9 21 3 21 3 15" />
-                    <line x1="21" y1="3" x2="14" y2="10" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                  </svg>
-                  Expand
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-3.5 h-3.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    Browse
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const ext =
+                          file.name.split(".").pop()?.toLowerCase() ?? "";
+                        const extToMime: Record<string, string> = {
+                          json: "application/json",
+                          xml: "application/xml",
+                          html: "text/html",
+                          htm: "text/html",
+                          css: "text/css",
+                          js: "application/javascript",
+                          ts: "application/typescript",
+                          txt: "text/plain",
+                          csv: "text/csv",
+                          svg: "image/svg+xml",
+                        };
+                        const mime = extToMime[ext];
+                        if (mime) {
+                          setHeaderRows((prev) => {
+                            const idx = prev.findIndex(
+                              (r) =>
+                                r.key.trim().toLowerCase() === "content-type",
+                            );
+                            if (idx >= 0) {
+                              return prev.map((r, i) =>
+                                i === idx ? { ...r, value: mime } : r,
+                              );
+                            }
+                            return [
+                              ...prev,
+                              { key: "Content-Type", value: mime },
+                            ];
+                          });
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (ev) =>
+                          setResponseBody((ev.target?.result as string) ?? "");
+                        reader.readAsText(file);
+                        // reset so same file can be picked again
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setBodyFullscreen(true)}
+                    className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+                    title="Open fullscreen editor"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-3.5 h-3.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="15 3 21 3 21 9" />
+                      <polyline points="9 21 3 21 3 15" />
+                      <line x1="21" y1="3" x2="14" y2="10" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
+                    Expand
+                  </button>
+                </div>
               </div>
               <div className="rounded overflow-hidden border border-zinc-700 focus-within:border-cyan-500">
                 <Editor

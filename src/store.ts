@@ -36,7 +36,7 @@ interface DittoStore {
 export const useStore = create<DittoStore>((set, get) => ({
   routes: [],
   serverRunning: false,
-  port: 8080,
+  port: Number(localStorage.getItem("port") ?? 8080),
   theme: (localStorage.getItem("theme") as "dark" | "light") ?? "dark",
 
   toggleTheme: () => {
@@ -124,5 +124,8 @@ export const useStore = create<DittoStore>((set, get) => ({
     set({ serverRunning: false });
   },
 
-  setPort: (port) => set({ port }),
+  setPort: (port) => {
+    localStorage.setItem("port", String(port));
+    set({ port });
+  },
 }));

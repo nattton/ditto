@@ -87,13 +87,15 @@ export default function RouteList({ onEdit }: Props) {
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
 
-  const filtered = routes.filter((r) => {
-    const matchesPath = r.path.toLowerCase().includes(search.toLowerCase());
-    const matchesTags =
-      activeTags.length === 0 ||
-      activeTags.every((t) => (r.tags ?? []).includes(t));
-    return matchesPath && matchesTags;
-  });
+  const filtered = routes
+    .filter((r) => {
+      const matchesPath = r.path.toLowerCase().includes(search.toLowerCase());
+      const matchesTags =
+        activeTags.length === 0 ||
+        activeTags.every((t) => (r.tags ?? []).includes(t));
+      return matchesPath && matchesTags;
+    })
+    .sort((a, b) => a.path.localeCompare(b.path));
 
   if (routes.length === 0) {
     return (

@@ -67,11 +67,20 @@ interface Props {
 }
 
 export default function RouteList({ onEdit }: Props) {
-  const { routes, removeRoute, toggleRoute, duplicateRoute, serverRunning, port } = useStore();
+  const {
+    routes,
+    removeRoute,
+    toggleRoute,
+    duplicateRoute,
+    serverRunning,
+    port,
+  } = useStore();
   const [search, setSearch] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
 
-  const allTags = Array.from(new Set(routes.flatMap((r) => r.tags ?? [])));
+  const allTags = Array.from(new Set(routes.flatMap((r) => r.tags ?? []))).sort(
+    (a, b) => a.localeCompare(b),
+  );
 
   const toggleTag = (tag: string) =>
     setActiveTags((prev) =>

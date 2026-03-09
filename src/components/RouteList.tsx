@@ -150,7 +150,7 @@ export default function RouteList({ onEdit }: Props) {
                   : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-violet-500/40 hover:text-violet-300"
               }`}
             >
-              #{tag}
+              {tag}
             </button>
           ))}
           {activeTags.length > 0 && (
@@ -224,7 +224,7 @@ export default function RouteList({ onEdit }: Props) {
                           key={t}
                           className="inline-block px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs font-medium"
                         >
-                          #{t}
+                          {t}
                         </span>
                       ))}
                     </div>

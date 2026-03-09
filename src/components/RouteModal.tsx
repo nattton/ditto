@@ -16,7 +16,11 @@ interface Props {
 }
 
 export default function RouteModal({ route, onClose }: Props) {
-  const { addRoute, removeRoute, theme } = useStore();
+  const { addRoute, removeRoute, theme, routes } = useStore();
+
+  const allExistingTags = [
+    ...new Set(routes.flatMap((r) => r.tags ?? [])),
+  ].sort((a, b) => a.localeCompare(b));
 
   const monacoTheme = theme === "dark" ? "vs-dark" : "light";
 
@@ -117,7 +121,7 @@ export default function RouteModal({ route, onClose }: Props) {
       response_body: responseBody,
       headers,
       enabled: route?.enabled ?? true,
-      tags,
+      tags: [...tags].sort((a, b) => a.localeCompare(b)),
       delay_ms: delayMs,
     };
 
@@ -328,6 +332,26 @@ export default function RouteModal({ route, onClose }: Props) {
                   className="flex-1 min-w-[8rem] bg-transparent text-zinc-100 text-xs outline-none placeholder-zinc-600"
                 />
               </div>
+              {(() => {
+                const suggestions = allExistingTags.filter(
+                  (t) => !tags.includes(t),
+                );
+                if (suggestions.length === 0) return null;
+                return (
+                  <div className="flex flex-wrap gap-1.5">
+                    {suggestions.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setTags((prev) => [...prev, t])}
+                        className="px-2 py-0.5 rounded-full border border-zinc-600 text-zinc-500 hover:border-violet-500/50 hover:text-violet-300 hover:bg-violet-500/10 text-xs transition-colors"
+                      >
+                        + {t}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Headers */}

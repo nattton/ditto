@@ -35,7 +35,9 @@ function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "ditto-routes.json";
+    const now = new Date();
+    const dt = now.toISOString().replace(/[:T]/g, "-").slice(0, 19);
+    a.download = `ditto-routes-${dt}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

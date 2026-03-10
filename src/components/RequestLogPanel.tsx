@@ -34,6 +34,68 @@ function StatusBadge({ code }: { code: number }) {
   );
 }
 
+function CopyBodyButton({ body }: { body: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    let text = body;
+    try {
+      text = JSON.stringify(JSON.parse(body), null, 2);
+    } catch {
+      // use raw body
+    }
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      title="Copy body"
+      className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-cyan-400 transition-colors"
+    >
+      {copied ? (
+        <>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-3 h-3 text-emerald-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          <span className="text-emerald-400">Copied</span>
+        </>
+      ) : (
+        <>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-3 h-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+            />
+          </svg>
+          <span>Copy</span>
+        </>
+      )}
+    </button>
+  );
+}
+
 function LogRow({ log }: { log: RequestLog }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -95,36 +157,91 @@ function LogRow({ log }: { log: RequestLog }) {
       </button>
 
       {expanded && (
-        <div className="px-4 pb-3 pt-1 bg-zinc-900/50 text-xs font-mono space-y-1.5">
-          <div className="flex gap-2">
-            <span className="text-zinc-500 w-24 shrink-0">Timestamp</span>
-            <span className="text-zinc-300">
-              {new Date(log.timestamp_ms).toISOString()}
-            </span>
+        <div className="px-4 pb-3 pt-1 bg-zinc-900/50 text-xs font-mono space-y-3">
+          {/* Meta */}
+          <div className="space-y-1.5">
+            <div className="flex gap-2">
+              <span className="text-zinc-500 w-24 shrink-0">Timestamp</span>
+              <span className="text-zinc-300">
+                {new Date(log.timestamp_ms).toISOString()}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <span className="text-zinc-500 w-24 shrink-0">Method</span>
+              <span className="text-zinc-300">{log.method}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="text-zinc-500 w-24 shrink-0">Path</span>
+              <span className="text-zinc-300">{log.path}</span>
+            </div>
+            {log.query && (
+              <div className="flex gap-2">
+                <span className="text-zinc-500 w-24 shrink-0">Query</span>
+                <span className="text-zinc-300">{log.query}</span>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <span className="text-zinc-500 w-24 shrink-0">Status</span>
+              <StatusBadge code={log.status_code} />
+            </div>
+            <div className="flex gap-2">
+              <span className="text-zinc-500 w-24 shrink-0">Duration</span>
+              <span className="text-zinc-300">{log.duration_ms}ms</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="text-zinc-500 w-24 shrink-0">Matched</span>
+              <span
+                className={log.matched ? "text-emerald-400" : "text-red-400"}
+              >
+                {log.matched
+                  ? `Yes (route: ${log.route_id})`
+                  : "No — no route matched"}
+              </span>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <span className="text-zinc-500 w-24 shrink-0">Method</span>
-            <span className="text-zinc-300">{log.method}</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-zinc-500 w-24 shrink-0">Path</span>
-            <span className="text-zinc-300">{log.path}</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-zinc-500 w-24 shrink-0">Status</span>
-            <StatusBadge code={log.status_code} />
-          </div>
-          <div className="flex gap-2">
-            <span className="text-zinc-500 w-24 shrink-0">Duration</span>
-            <span className="text-zinc-300">{log.duration_ms}ms</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-zinc-500 w-24 shrink-0">Matched</span>
-            <span className={log.matched ? "text-emerald-400" : "text-red-400"}>
-              {log.matched
-                ? `Yes (route: ${log.route_id})`
-                : "No — no route matched"}
-            </span>
+
+          {/* Request Headers */}
+          {Object.keys(log.request_headers).length > 0 && (
+            <div>
+              <p className="text-zinc-500 mb-1 uppercase tracking-wider text-[10px]">
+                Request Headers
+              </p>
+              <div className="rounded bg-zinc-800 border border-zinc-700 px-3 py-2 space-y-0.5">
+                {Object.entries(log.request_headers).map(([k, v]) => (
+                  <div key={k} className="flex gap-2">
+                    <span className="text-cyan-500 shrink-0">{k}:</span>
+                    <span className="text-zinc-300 break-all">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Request Body */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-zinc-500 uppercase tracking-wider text-[10px]">
+                Request Body
+              </p>
+              {log.request_body && <CopyBodyButton body={log.request_body} />}
+            </div>
+            {log.request_body ? (
+              <pre className="rounded bg-zinc-800 border border-zinc-700 px-3 py-2 text-zinc-300 whitespace-pre-wrap break-all overflow-x-auto max-h-48">
+                {(() => {
+                  try {
+                    return JSON.stringify(
+                      JSON.parse(log.request_body),
+                      null,
+                      2,
+                    );
+                  } catch {
+                    return log.request_body;
+                  }
+                })()}
+              </pre>
+            ) : (
+              <span className="text-zinc-700 italic">empty</span>
+            )}
           </div>
         </div>
       )}

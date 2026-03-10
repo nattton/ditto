@@ -1,3 +1,4 @@
+use axum::body::Bytes;
 use axum::{
     body::Body,
     extract::{Request, State},
@@ -5,6 +6,7 @@ use axum::{
     response::{IntoResponse, Response},
     Router,
 };
+use http_body_util::BodyExt;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
@@ -47,6 +49,9 @@ pub struct RequestLog {
     pub timestamp_ms: u64,
     pub method: String,
     pub path: String,
+    pub query: String,
+    pub request_headers: HashMap<String, String>,
+    pub request_body: String,
     pub status_code: u16,
     pub matched: bool,
     pub route_id: Option<String>,
@@ -91,8 +96,16 @@ async fn mock_handler(State(state): State<ServerState>, req: Request) -> Respons
         .unwrap_or(0);
     let method = req.method().as_str().to_uppercase();
     let path = req.uri().path().to_string();
-    let routes = state.routes.read().await;
+    let query = req.uri().query().unwrap_or("").to_string();
 
+    // Collect request headers
+    let request_headers: HashMap<String, String> = req
+        .headers()
+        .iter()
+        .map(|(k, v)| (k.as_str().to_string(), v.to_str().unwrap_or("").to_string()))
+        .collect();
+
+    let routes = state.routes.read().await;
     let matched = routes
         .values()
         .find(|r| {
@@ -102,6 +115,21 @@ async fn mock_handler(State(state): State<ServerState>, req: Request) -> Respons
         })
         .cloned();
     drop(routes);
+
+    // Consume request body (cap at 64 KB to avoid memory issues)
+    const MAX_BODY: usize = 64 * 1024;
+    let body_bytes: Bytes = match req.into_body().collect().await {
+        Ok(collected) => {
+            let b = collected.to_bytes();
+            if b.len() > MAX_BODY {
+                b.slice(..MAX_BODY)
+            } else {
+                b
+            }
+        }
+        Err(_) => Bytes::new(),
+    };
+    let request_body = String::from_utf8_lossy(&body_bytes).into_owned();
 
     let response = match matched.clone() {
         Some(route) => {
@@ -139,6 +167,9 @@ async fn mock_handler(State(state): State<ServerState>, req: Request) -> Respons
         timestamp_ms,
         method,
         path,
+        query,
+        request_headers,
+        request_body,
         status_code,
         matched: matched.is_some(),
         route_id: matched.map(|r| r.id),

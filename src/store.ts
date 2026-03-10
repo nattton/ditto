@@ -20,6 +20,9 @@ export interface RequestLog {
   timestamp_ms: number;
   method: string;
   path: string;
+  query: string;
+  request_headers: Record<string, string>;
+  request_body: string;
   status_code: number;
   matched: boolean;
   route_id: string | null;

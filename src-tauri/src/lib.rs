@@ -6,9 +6,10 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
@@ -38,8 +39,26 @@ pub struct RouteConfig {
 
 type RouteStore = Arc<RwLock<HashMap<String, RouteConfig>>>;
 
+const MAX_LOGS: usize = 500;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestLog {
+    pub id: u64,
+    pub timestamp_ms: u64,
+    pub method: String,
+    pub path: String,
+    pub status_code: u16,
+    pub matched: bool,
+    pub route_id: Option<String>,
+    pub duration_ms: u64,
+}
+
+type LogStore = Arc<Mutex<VecDeque<RequestLog>>>;
+
 pub struct AppState {
     pub routes: RouteStore,
+    pub logs: LogStore,
+    pub log_counter: Arc<AtomicU64>,
     pub shutdown_tx: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
     pub db_path: PathBuf,
 }
@@ -60,9 +79,16 @@ fn persist_routes(routes: &HashMap<String, RouteConfig>, path: &Path) {
 #[derive(Clone)]
 struct ServerState {
     routes: RouteStore,
+    logs: LogStore,
+    log_counter: Arc<AtomicU64>,
 }
 
 async fn mock_handler(State(state): State<ServerState>, req: Request) -> Response {
+    let start = std::time::Instant::now();
+    let timestamp_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
     let method = req.method().as_str().to_uppercase();
     let path = req.uri().path().to_string();
     let routes = state.routes.read().await;
@@ -75,8 +101,9 @@ async fn mock_handler(State(state): State<ServerState>, req: Request) -> Respons
                 && r.path == path
         })
         .cloned();
+    drop(routes);
 
-    match matched {
+    let response = match matched.clone() {
         Some(route) => {
             if route.delay_ms > 0 {
                 tokio::time::sleep(std::time::Duration::from_millis(route.delay_ms)).await;
@@ -102,7 +129,29 @@ async fn mock_handler(State(state): State<ServerState>, req: Request) -> Respons
                 .body(Body::from(body.to_string()))
                 .unwrap()
         }
+    };
+
+    let duration_ms = start.elapsed().as_millis() as u64;
+    let status_code = response.status().as_u16();
+    let id = state.log_counter.fetch_add(1, Ordering::Relaxed);
+    let log = RequestLog {
+        id,
+        timestamp_ms,
+        method,
+        path,
+        status_code,
+        matched: matched.is_some(),
+        route_id: matched.map(|r| r.id),
+        duration_ms,
+    };
+    let mut logs = state.logs.lock().await;
+    if logs.len() >= MAX_LOGS {
+        logs.pop_front();
     }
+    logs.push_back(log);
+    drop(logs);
+
+    response
 }
 
 #[tauri::command]
@@ -128,6 +177,19 @@ async fn remove_route(state: tauri::State<'_, AppState>, id: String) -> Result<(
 }
 
 #[tauri::command]
+async fn get_request_logs(state: tauri::State<'_, AppState>) -> Result<Vec<RequestLog>, String> {
+    let logs = state.logs.lock().await;
+    Ok(logs.iter().rev().cloned().collect())
+}
+
+#[tauri::command]
+async fn clear_request_logs(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let mut logs = state.logs.lock().await;
+    logs.clear();
+    Ok(())
+}
+
+#[tauri::command]
 async fn start_server(state: tauri::State<'_, AppState>, port: u16) -> Result<(), String> {
     let mut guard = state.shutdown_tx.lock().await;
     if guard.is_some() {
@@ -139,6 +201,8 @@ async fn start_server(state: tauri::State<'_, AppState>, port: u16) -> Result<()
 
     let server_state = ServerState {
         routes: state.routes.clone(),
+        logs: state.logs.clone(),
+        log_counter: state.log_counter.clone(),
     };
     let app = Router::new()
         .fallback(mock_handler)
@@ -222,6 +286,8 @@ pub fn run() {
             let initial_routes = load_routes(&db_path);
             let app_state = AppState {
                 routes: Arc::new(RwLock::new(initial_routes)),
+                logs: Arc::new(Mutex::new(VecDeque::new())),
+                log_counter: Arc::new(AtomicU64::new(0)),
                 shutdown_tx: Mutex::new(None),
                 db_path,
             };
@@ -237,6 +303,8 @@ pub fn run() {
             get_local_ips,
             export_routes,
             import_routes,
+            get_request_logs,
+            clear_request_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

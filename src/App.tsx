@@ -4,12 +4,14 @@ import ServerBar from "./components/ServerBar";
 import RouteList from "./components/RouteList";
 import RouteModal from "./components/RouteModal";
 import ImportModal from "./components/ImportModal";
+import RequestLogPanel from "./components/RequestLogPanel";
 
 function App() {
   const { fetchRoutes, exportRoutes, theme } = useStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRoute, setEditingRoute] = useState<RouteConfig | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
 
   useEffect(() => {
     fetchRoutes();
@@ -65,6 +67,12 @@ function App() {
               Export
             </button>
             <button
+              onClick={() => setLogOpen(true)}
+              className="px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors"
+            >
+              Logs
+            </button>
+            <button
               onClick={openAdd}
               className="px-4 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-sm font-semibold hover:bg-cyan-500/30 transition-colors"
             >
@@ -80,6 +88,7 @@ function App() {
         <RouteModal route={editingRoute} onClose={() => setModalOpen(false)} />
       )}
       {importOpen && <ImportModal onClose={() => setImportOpen(false)} />}
+      {logOpen && <RequestLogPanel onClose={() => setLogOpen(false)} />}
     </div>
   );
 }

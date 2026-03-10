@@ -15,11 +15,23 @@ export interface RouteConfig {
   delay_ms: number;
 }
 
+export interface RequestLog {
+  id: number;
+  timestamp_ms: number;
+  method: string;
+  path: string;
+  status_code: number;
+  matched: boolean;
+  route_id: string | null;
+  duration_ms: number;
+}
+
 interface DittoStore {
   routes: RouteConfig[];
   serverRunning: boolean;
   port: number;
   theme: "dark" | "light";
+  requestLogs: RequestLog[];
   toggleTheme: () => void;
   fetchRoutes: () => Promise<void>;
   addRoute: (route: RouteConfig) => Promise<void>;
@@ -31,6 +43,8 @@ interface DittoStore {
   startServer: () => Promise<void>;
   stopServer: () => Promise<void>;
   setPort: (port: number) => void;
+  fetchRequestLogs: () => Promise<void>;
+  clearRequestLogs: () => Promise<void>;
 }
 
 export const useStore = create<DittoStore>((set, get) => ({
@@ -38,6 +52,7 @@ export const useStore = create<DittoStore>((set, get) => ({
   serverRunning: false,
   port: Number(localStorage.getItem("port") ?? 8080),
   theme: (localStorage.getItem("theme") as "dark" | "light") ?? "dark",
+  requestLogs: [],
 
   toggleTheme: () => {
     const next = get().theme === "dark" ? "light" : "dark";
@@ -127,5 +142,15 @@ export const useStore = create<DittoStore>((set, get) => ({
   setPort: (port) => {
     localStorage.setItem("port", String(port));
     set({ port });
+  },
+
+  fetchRequestLogs: async () => {
+    const requestLogs = await invoke<RequestLog[]>("get_request_logs");
+    set({ requestLogs });
+  },
+
+  clearRequestLogs: async () => {
+    await invoke("clear_request_logs");
+    set({ requestLogs: [] });
   },
 }));

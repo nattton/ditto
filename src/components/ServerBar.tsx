@@ -67,9 +67,14 @@ export default function ServerBar() {
   const [localIps, setLocalIps] = useState<string[]>([]);
 
   useEffect(() => {
-    invoke<string[]>("get_local_ips")
-      .then(setLocalIps)
-      .catch(() => {});
+    const fetchIps = () => {
+      invoke<string[]>("get_local_ips")
+        .then(setLocalIps)
+        .catch(() => {});
+    };
+    fetchIps();
+    const interval = setInterval(fetchIps, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const toggle = async () => {

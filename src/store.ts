@@ -34,8 +34,10 @@ interface DittoStore {
   serverRunning: boolean;
   port: number;
   theme: "dark" | "light";
+  tagColors: Record<string, string>;
   requestLogs: RequestLog[];
   toggleTheme: () => void;
+  setTagColor: (tag: string, color: string) => void;
   fetchRoutes: () => Promise<void>;
   addRoute: (route: RouteConfig) => Promise<void>;
   removeRoute: (id: string) => Promise<void>;
@@ -55,7 +57,14 @@ export const useStore = create<DittoStore>((set, get) => ({
   serverRunning: false,
   port: Number(localStorage.getItem("port") ?? 8080),
   theme: (localStorage.getItem("theme") as "dark" | "light") ?? "dark",
+  tagColors: JSON.parse(localStorage.getItem("tagColors") ?? "{}"),
   requestLogs: [],
+
+  setTagColor: (tag, color) => {
+    const next = { ...get().tagColors, [tag]: color };
+    localStorage.setItem("tagColors", JSON.stringify(next));
+    set({ tagColors: next });
+  },
 
   toggleTheme: () => {
     const next = get().theme === "dark" ? "light" : "dark";

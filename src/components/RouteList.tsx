@@ -66,6 +66,8 @@ interface Props {
   onEdit: (route: RouteConfig) => void;
 }
 
+const DEFAULT_COLOR = "#a78bfa";
+
 export default function RouteList({ onEdit }: Props) {
   const {
     routes,
@@ -74,9 +76,12 @@ export default function RouteList({ onEdit }: Props) {
     duplicateRoute,
     serverRunning,
     port,
+    tagColors,
   } = useStore();
   const [search, setSearch] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
+
+  const tagColor = (tag: string) => tagColors[tag] ?? DEFAULT_COLOR;
 
   const allTags = Array.from(new Set(routes.flatMap((r) => r.tags ?? []))).sort(
     (a, b) => a.localeCompare(b),
@@ -140,19 +145,24 @@ export default function RouteList({ onEdit }: Props) {
       {/* Tag filter pills */}
       {allTags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {allTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => toggleTag(tag)}
-              className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
-                activeTags.includes(tag)
-                  ? "bg-violet-500/30 text-violet-200 border-violet-500/60"
-                  : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-violet-500/40 hover:text-violet-300"
-              }`}
-            >
-              {tag}
-            </button>
-          ))}
+          {allTags.map((tag) => {
+            const color = tagColor(tag);
+            const active = activeTags.includes(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className="px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all"
+                style={{
+                  backgroundColor: active ? `${color}33` : "rgb(39 39 42)",
+                  borderColor: active ? `${color}80` : "rgb(63 63 70)",
+                  color: active ? color : "rgb(161 161 170)",
+                }}
+              >
+                {tag}
+              </button>
+            );
+          })}
           {activeTags.length > 0 && (
             <button
               onClick={() => setActiveTags([])}
@@ -219,14 +229,22 @@ export default function RouteList({ onEdit }: Props) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {(route.tags ?? []).map((t) => (
-                        <span
-                          key={t}
-                          className="inline-block px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs font-medium"
-                        >
-                          {t}
-                        </span>
-                      ))}
+                      {(route.tags ?? []).map((t) => {
+                        const color = tagColor(t);
+                        return (
+                          <span
+                            key={t}
+                            className="inline-block px-2 py-0.5 rounded-full text-xs font-medium border"
+                            style={{
+                              backgroundColor: `${color}26`,
+                              borderColor: `${color}55`,
+                              color: color,
+                            }}
+                          >
+                            {t}
+                          </span>
+                        );
+                      })}
                     </div>
                   </td>
                   <td className="px-4 py-3">

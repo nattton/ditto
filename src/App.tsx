@@ -5,6 +5,7 @@ import RouteList from "./components/RouteList";
 import RouteModal from "./components/RouteModal";
 import ImportModal from "./components/ImportModal";
 import RequestLogPanel from "./components/RequestLogPanel";
+import TagColorModal from "./components/TagColorModal";
 
 function App() {
   const { fetchRoutes, exportRoutes, theme } = useStore();
@@ -12,6 +13,7 @@ function App() {
   const [editingRoute, setEditingRoute] = useState<RouteConfig | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const [tagColorOpen, setTagColorOpen] = useState(false);
 
   useEffect(() => {
     fetchRoutes();
@@ -67,6 +69,12 @@ function App() {
               Export
             </button>
             <button
+              onClick={() => setTagColorOpen(true)}
+              className="px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors"
+            >
+              Tag Colors
+            </button>
+            <button
               onClick={() => setLogOpen(true)}
               className="px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors"
             >
@@ -89,6 +97,7 @@ function App() {
       )}
       {importOpen && <ImportModal onClose={() => setImportOpen(false)} />}
       {logOpen && <RequestLogPanel onClose={() => setLogOpen(false)} />}
+      {tagColorOpen && <TagColorModal onClose={() => setTagColorOpen(false)} />}
     </div>
   );
 }

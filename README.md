@@ -2,6 +2,8 @@
 
 Ditto is a lightweight desktop app for running a local HTTP mock server. Define routes with custom methods, paths, status codes, response bodies, headers, tags, and delays — then start the server and instantly intercept API calls during development or testing.
 
+![ditto-main-screen](https://github.com/user-attachments/assets/cfac29bb-0ad9-4a0b-b29e-22def5d0eef5)
+
 ## Download
 
 [Download the latest release](https://github.com/nattton/ditto/releases)

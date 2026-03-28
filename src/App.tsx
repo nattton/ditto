@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { useStore, RouteConfig } from "./store";
-import ServerBar from "./components/ServerBar";
-import RouteList from "./components/RouteList";
-import RouteModal from "./components/RouteModal";
+import { useEffect, useState } from "react";
 import ImportModal from "./components/ImportModal";
 import RequestLogPanel from "./components/RequestLogPanel";
+import RouteList from "./components/RouteList";
+import RouteModal from "./components/RouteModal";
+import ServerBar from "./components/ServerBar";
 import TagColorModal from "./components/TagColorModal";
+import { RouteConfig, useStore } from "./store";
 
 function App() {
   const { fetchRoutes, exportRoutes, theme } = useStore();
@@ -47,42 +47,42 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
+    <div className='min-h-screen bg-zinc-950 text-zinc-100 flex flex-col'>
       <ServerBar />
 
-      <main className="flex-1 p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-widest">
+      <main className='flex-1 p-6'>
+        <div className='flex items-center justify-between mb-5'>
+          <h2 className='text-sm font-semibold text-zinc-400 uppercase tracking-widest'>
             Mock Routes
           </h2>
-          <div className="flex items-center gap-2">
+          <div className='flex items-center gap-2'>
             <button
               onClick={() => setImportOpen(true)}
-              className="px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors"
+              className='px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors'
             >
               Import
             </button>
             <button
               onClick={handleExport}
-              className="px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors"
+              className='px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors'
             >
               Export
             </button>
             <button
               onClick={() => setTagColorOpen(true)}
-              className="px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors"
+              className='px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors'
             >
               Tag Colors
             </button>
             <button
               onClick={() => setLogOpen(true)}
-              className="px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors"
+              className='px-4 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-sm font-semibold hover:bg-zinc-700 transition-colors'
             >
               Logs
             </button>
             <button
               onClick={openAdd}
-              className="px-4 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-sm font-semibold hover:bg-cyan-500/30 transition-colors"
+              className='px-4 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-sm font-semibold hover:bg-cyan-500/30 transition-colors'
             >
               + Add Route
             </button>

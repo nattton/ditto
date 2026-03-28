@@ -1,7 +1,7 @@
-import { useState, useEffect, KeyboardEvent, useRef } from "react";
-import { useStore, RouteConfig, HttpMethod } from "../store";
 import Editor, { OnMount } from "@monaco-editor/react";
 import type { editor as MonacoEditor } from "monaco-editor";
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { HttpMethod, RouteConfig, useStore } from "../store";
 
 const METHODS: HttpMethod[] = ["ANY", "GET", "POST", "PUT", "PATCH", "DELETE"];
 
@@ -16,7 +16,7 @@ interface Props {
 }
 
 export default function RouteModal({ route, onClose }: Props) {
-  const { addRoute, removeRoute, theme, routes } = useStore();
+  const { addRoute, theme, routes } = useStore();
 
   const allExistingTags = [
     ...new Set(routes.flatMap((r) => r.tags ?? [])),
@@ -35,9 +35,54 @@ export default function RouteModal({ route, onClose }: Props) {
   const [tagInput, setTagInput] = useState("");
   const [delayMs, setDelayMs] = useState(0);
   const [bodyFullscreen, setBodyFullscreen] = useState(false);
+  const [routeId, setRouteId] = useState<string>(
+    route?.id ?? crypto.randomUUID(),
+  );
+  const [baseline, setBaseline] = useState<RouteConfig | null>(route);
   const monacoEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(
     null,
   );
+
+  const isDirty = useMemo(() => {
+    if (!baseline) return true;
+
+    if (method !== baseline.method) return true;
+    if (path !== baseline.path) return true;
+    if (statusCode !== baseline.status_code) return true;
+    if (responseBody !== baseline.response_body) return true;
+    if (delayMs !== (baseline.delay_ms ?? 0)) return true;
+
+    const sortedTags = [...tags].sort((a, b) => a.localeCompare(b));
+    const baselineTags = [...(baseline.tags ?? [])].sort((a, b) =>
+      a.localeCompare(b),
+    );
+    if (JSON.stringify(sortedTags) !== JSON.stringify(baselineTags))
+      return true;
+
+    const currentHeaders: Record<string, string> = {};
+    for (const { key, value } of headerRows) {
+      if (key.trim()) currentHeaders[key.trim()] = value;
+    }
+    const baselineHeaders = baseline.headers || {};
+    if (
+      Object.keys(currentHeaders).length !== Object.keys(baselineHeaders).length
+    )
+      return true;
+    for (const [k, v] of Object.entries(currentHeaders)) {
+      if (baselineHeaders[k] !== v) return true;
+    }
+
+    return false;
+  }, [
+    baseline,
+    method,
+    path,
+    statusCode,
+    responseBody,
+    delayMs,
+    tags,
+    headerRows,
+  ]);
 
   const editorLanguage = (() => {
     const ct =
@@ -64,6 +109,8 @@ export default function RouteModal({ route, onClose }: Props) {
 
   useEffect(() => {
     if (route) {
+      setBaseline(route);
+      setRouteId(route.id);
       setMethod(route.method as HttpMethod);
       setPath(route.path);
       setStatusCode(route.status_code);
@@ -107,64 +154,78 @@ export default function RouteModal({ route, onClose }: Props) {
       prev.map((row, idx) => (idx === i ? { ...row, [field]: val } : row)),
     );
 
-  const save = async () => {
+  const save = async (closeDialog: boolean) => {
     const headers: Record<string, string> = {};
     for (const { key, value } of headerRows) {
       if (key.trim()) headers[key.trim()] = value;
     }
 
     const newRoute: RouteConfig = {
-      id: route?.id ?? crypto.randomUUID(),
+      id: routeId,
       method,
       path,
       status_code: statusCode,
       response_body: responseBody,
       headers,
-      enabled: route?.enabled ?? true,
+      enabled: baseline?.enabled ?? true,
       tags: [...tags].sort((a, b) => a.localeCompare(b)),
       delay_ms: delayMs,
     };
 
-    if (route) {
-      await removeRoute(route.id);
-    }
     await addRoute(newRoute);
-    onClose();
+    if (closeDialog) {
+      onClose();
+    } else {
+      setBaseline(newRoute);
+    }
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        if (isDirty) {
+          save(false);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isDirty, save]);
 
   return (
     <>
       {bodyFullscreen && (
         <div
-          className="fixed inset-0 z-[60] flex flex-col"
+          className='fixed inset-0 z-[60] flex flex-col'
           style={{ background: theme === "dark" ? "#1e1e1e" : "#ffffff" }}
         >
-          <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-800 bg-zinc-900">
-            <span className="text-sm font-semibold text-zinc-100">
+          <div className='flex items-center justify-between px-6 py-3 border-b border-zinc-800 bg-zinc-900'>
+            <span className='text-sm font-semibold text-zinc-100'>
               Response Body
             </span>
-            <div className="flex items-center gap-3">
+            <div className='flex items-center gap-3'>
               {editorLanguage !== "plaintext" && (
                 <button
-                  type="button"
+                  type='button'
                   onClick={formatDocument}
-                  className="px-3 py-1.5 text-xs rounded bg-zinc-700 text-zinc-200 hover:bg-zinc-600 transition-colors font-mono"
+                  className='px-3 py-1.5 text-xs rounded bg-zinc-700 text-zinc-200 hover:bg-zinc-600 transition-colors font-mono'
                 >
                   Format
                 </button>
               )}
               <button
-                type="button"
+                type='button'
                 onClick={() => setBodyFullscreen(false)}
-                className="px-3 py-1.5 text-sm rounded bg-cyan-500 text-zinc-950 font-semibold hover:bg-cyan-400 transition-colors"
+                className='px-3 py-1.5 text-sm rounded bg-cyan-500 text-zinc-950 font-semibold hover:bg-cyan-400 transition-colors'
               >
                 Done
               </button>
             </div>
           </div>
-          <div className="flex-1">
+          <div className='flex-1'>
             <Editor
-              height="100%"
+              height='100%'
               language={editorLanguage}
               theme={monacoTheme}
               value={responseBody}
@@ -184,31 +245,31 @@ export default function RouteModal({ route, onClose }: Props) {
           </div>
         </div>
       )}
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-4xl shadow-2xl">
+      <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50'>
+        <div className='bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-4xl shadow-2xl'>
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-            <h2 className="text-base font-semibold text-zinc-100">
+          <div className='flex items-center justify-between px-6 py-4 border-b border-zinc-800'>
+            <h2 className='text-base font-semibold text-zinc-100'>
               {route ? "Edit Route" : "Add Route"}
             </h2>
             <button
               onClick={onClose}
-              className="text-zinc-500 hover:text-zinc-300 text-xl leading-none"
+              className='text-zinc-500 hover:text-zinc-300 text-xl leading-none'
             >
               ×
             </button>
           </div>
 
           {/* Body */}
-          <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div className='px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto'>
             {/* Method + Path */}
-            <div className="flex gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-zinc-500">Method</label>
+            <div className='flex gap-3'>
+              <div className='flex flex-col gap-1'>
+                <label className='text-xs text-zinc-500'>Method</label>
                 <select
                   value={method}
                   onChange={(e) => setMethod(e.target.value as HttpMethod)}
-                  className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm focus:outline-none focus:border-cyan-500"
+                  className='px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm focus:outline-none focus:border-cyan-500'
                 >
                   {METHODS.map((m) => (
                     <option key={m} value={m}>
@@ -217,65 +278,65 @@ export default function RouteModal({ route, onClose }: Props) {
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col gap-1 flex-1">
-                <label className="text-xs text-zinc-500">Path</label>
+              <div className='flex flex-col gap-1 flex-1'>
+                <label className='text-xs text-zinc-500'>Path</label>
                 <input
                   value={path}
                   onChange={(e) => setPath(e.target.value)}
-                  placeholder="/api/users"
-                  className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono focus:outline-none focus:border-cyan-500"
+                  placeholder='/api/users'
+                  className='px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono focus:outline-none focus:border-cyan-500'
                 />
               </div>
-              <div className="flex flex-col gap-1 w-24">
-                <label className="text-xs text-zinc-500">Status</label>
+              <div className='flex flex-col gap-1 w-24'>
+                <label className='text-xs text-zinc-500'>Status</label>
                 <input
-                  type="number"
+                  type='number'
                   value={statusCode}
                   onChange={(e) => setStatusCode(Number(e.target.value))}
-                  className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono focus:outline-none focus:border-cyan-500"
+                  className='px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono focus:outline-none focus:border-cyan-500'
                 />
               </div>
-              <div className="flex flex-col gap-1 w-28">
-                <label className="text-xs text-zinc-500">Delay (ms)</label>
+              <div className='flex flex-col gap-1 w-28'>
+                <label className='text-xs text-zinc-500'>Delay (ms)</label>
                 <input
-                  type="number"
+                  type='number'
                   min={0}
                   value={delayMs}
                   onChange={(e) =>
                     setDelayMs(Math.max(0, Number(e.target.value)))
                   }
-                  className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono focus:outline-none focus:border-cyan-500"
+                  className='px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-sm font-mono focus:outline-none focus:border-cyan-500'
                 />
               </div>
             </div>
 
             {/* Response Body */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-zinc-500">Response Body</label>
-                <div className="flex items-center gap-3">
+            <div className='flex flex-col gap-1'>
+              <div className='flex items-center justify-between'>
+                <label className='text-xs text-zinc-500'>Response Body</label>
+                <div className='flex items-center gap-3'>
                   <label
-                    className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 cursor-pointer"
-                    title="Import from file"
+                    className='text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 cursor-pointer'
+                    title='Import from file'
                   >
                     <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-3.5 h-3.5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                      xmlns='http://www.w3.org/2000/svg'
+                      className='w-3.5 h-3.5'
+                      viewBox='0 0 24 24'
+                      fill='none'
+                      stroke='currentColor'
+                      strokeWidth='2'
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
                     >
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" y1="3" x2="12" y2="15" />
+                      <path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' />
+                      <polyline points='17 8 12 3 7 8' />
+                      <line x1='12' y1='3' x2='12' y2='15' />
                     </svg>
                     Browse
                     <input
-                      type="file"
-                      className="hidden"
+                      type='file'
+                      className='hidden'
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
@@ -321,33 +382,33 @@ export default function RouteModal({ route, onClose }: Props) {
                     />
                   </label>
                   <button
-                    type="button"
+                    type='button'
                     onClick={() => setBodyFullscreen(true)}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
-                    title="Open fullscreen editor"
+                    className='text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1'
+                    title='Open fullscreen editor'
                   >
                     <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-3.5 h-3.5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                      xmlns='http://www.w3.org/2000/svg'
+                      className='w-3.5 h-3.5'
+                      viewBox='0 0 24 24'
+                      fill='none'
+                      stroke='currentColor'
+                      strokeWidth='2'
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
                     >
-                      <polyline points="15 3 21 3 21 9" />
-                      <polyline points="9 21 3 21 3 15" />
-                      <line x1="21" y1="3" x2="14" y2="10" />
-                      <line x1="3" y1="21" x2="10" y2="14" />
+                      <polyline points='15 3 21 3 21 9' />
+                      <polyline points='9 21 3 21 3 15' />
+                      <line x1='21' y1='3' x2='14' y2='10' />
+                      <line x1='3' y1='21' x2='10' y2='14' />
                     </svg>
                     Expand
                   </button>
                 </div>
               </div>
-              <div className="rounded overflow-hidden border border-zinc-700 focus-within:border-cyan-500">
+              <div className='rounded overflow-hidden border border-zinc-700 focus-within:border-cyan-500'>
                 <Editor
-                  height="200px"
+                  height='200px'
                   language={editorLanguage}
                   theme={monacoTheme}
                   value={responseBody}
@@ -371,19 +432,19 @@ export default function RouteModal({ route, onClose }: Props) {
             </div>
 
             {/* Tags */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs text-zinc-500">Tags</label>
-              <div className="flex flex-wrap gap-1.5 min-h-[2rem] px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded focus-within:border-cyan-500">
+            <div className='flex flex-col gap-2'>
+              <label className='text-xs text-zinc-500'>Tags</label>
+              <div className='flex flex-wrap gap-1.5 min-h-[2rem] px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded focus-within:border-cyan-500'>
                 {tags.map((t) => (
                   <span
                     key={t}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs font-medium"
+                    className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs font-medium'
                   >
                     {t}
                     <button
-                      type="button"
+                      type='button'
                       onClick={() => removeTag(t)}
-                      className="text-violet-400 hover:text-red-400 leading-none"
+                      className='text-violet-400 hover:text-red-400 leading-none'
                     >
                       ×
                     </button>
@@ -397,7 +458,7 @@ export default function RouteModal({ route, onClose }: Props) {
                   placeholder={
                     tags.length === 0 ? "Add tags… (Enter or comma)" : ""
                   }
-                  className="flex-1 min-w-[8rem] bg-transparent text-zinc-100 text-xs outline-none placeholder-zinc-600"
+                  className='flex-1 min-w-[8rem] bg-transparent text-zinc-100 text-xs outline-none placeholder-zinc-600'
                 />
               </div>
               {(() => {
@@ -406,13 +467,13 @@ export default function RouteModal({ route, onClose }: Props) {
                 );
                 if (suggestions.length === 0) return null;
                 return (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className='flex flex-wrap gap-1.5'>
                     {suggestions.map((t) => (
                       <button
                         key={t}
-                        type="button"
+                        type='button'
                         onClick={() => setTags((prev) => [...prev, t])}
-                        className="px-2 py-0.5 rounded-full border border-zinc-600 text-zinc-500 hover:border-violet-500/50 hover:text-violet-300 hover:bg-violet-500/10 text-xs transition-colors"
+                        className='px-2 py-0.5 rounded-full border border-zinc-600 text-zinc-500 hover:border-violet-500/50 hover:text-violet-300 hover:bg-violet-500/10 text-xs transition-colors'
                       >
                         + {t}
                       </button>
@@ -423,35 +484,35 @@ export default function RouteModal({ route, onClose }: Props) {
             </div>
 
             {/* Headers */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-zinc-500">Headers</label>
+            <div className='flex flex-col gap-2'>
+              <div className='flex items-center justify-between'>
+                <label className='text-xs text-zinc-500'>Headers</label>
                 <button
                   onClick={addHeaderRow}
-                  className="text-xs text-cyan-400 hover:text-cyan-300"
+                  className='text-xs text-cyan-400 hover:text-cyan-300'
                 >
                   + Add
                 </button>
               </div>
               {headerRows.map((row, i) => (
-                <div key={i} className="flex gap-2 items-center">
+                <div key={i} className='flex gap-2 items-center'>
                   <input
                     value={row.key}
                     onChange={(e) => updateHeaderRow(i, "key", e.target.value)}
-                    placeholder="Key"
-                    className="flex-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-xs font-mono focus:outline-none focus:border-cyan-500"
+                    placeholder='Key'
+                    className='flex-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-xs font-mono focus:outline-none focus:border-cyan-500'
                   />
                   <input
                     value={row.value}
                     onChange={(e) =>
                       updateHeaderRow(i, "value", e.target.value)
                     }
-                    placeholder="Value"
-                    className="flex-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-xs font-mono focus:outline-none focus:border-cyan-500"
+                    placeholder='Value'
+                    className='flex-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 text-xs font-mono focus:outline-none focus:border-cyan-500'
                   />
                   <button
                     onClick={() => removeHeaderRow(i)}
-                    className="text-zinc-600 hover:text-red-400 text-lg leading-none px-1"
+                    className='text-zinc-600 hover:text-red-400 text-lg leading-none px-1'
                   >
                     ×
                   </button>
@@ -461,18 +522,26 @@ export default function RouteModal({ route, onClose }: Props) {
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-3 px-6 py-4 border-t border-zinc-800">
+          <div className='flex justify-end gap-3 px-6 py-4 border-t border-zinc-800'>
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
+              className='px-4 py-2 text-sm rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors'
             >
               Cancel
             </button>
             <button
-              onClick={save}
-              className="px-4 py-2 text-sm rounded bg-cyan-500 text-zinc-950 font-semibold hover:bg-cyan-400 transition-colors"
+              onClick={() => save(false)}
+              disabled={!isDirty}
+              className='px-4 py-2 text-sm rounded bg-zinc-800 text-cyan-400 border border-zinc-700 font-semibold hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              {route ? "Save Changes" : "Add Route"}
+              {route ? "Save Changes" : "Save"}
+            </button>
+            <button
+              onClick={() => save(true)}
+              disabled={!isDirty}
+              className='px-4 py-2 text-sm rounded bg-cyan-500 text-zinc-950 font-semibold hover:bg-cyan-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+            >
+              {route ? "Save and Close" : "Add and Close"}
             </button>
           </div>
         </div>
